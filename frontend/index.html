@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Predictive Analytics Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a38;
+    --accent: #7c6af7;
+    --accent2: #f76a8c;
+    --accent3: #6af7c8;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #4ade80;
+    --warn: #fb923c;
+    --radius: 12px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content:'';
+    position:fixed; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(124,106,247,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index:0;
+  }
+
+  header {
+    position: relative; z-index:10;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px;
+    border-bottom:1px solid var(--border);
+    background: rgba(10,10,15,.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family:'Syne',sans-serif; font-weight:800; font-size:20px;
+    letter-spacing:-.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .logo span { font-weight:400; opacity:.6; }
+
+  .tab-nav { display:flex; gap:4px; }
+  .tab-btn {
+    padding:8px 18px; border-radius:8px; border:1px solid transparent;
+    background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif;
+    font-size:13px; cursor:pointer; transition:all .2s;
+  }
+  .tab-btn:hover { color:var(--text); background:var(--surface2); }
+  .tab-btn.active {
+    background:var(--surface2); border-color:var(--border);
+    color:var(--text);
+  }
+
+  .main {
+    position:relative; z-index:1;
+    max-width:1400px; margin:0 auto; padding:32px;
+    display:flex; flex-direction:column; gap:24px;
+  }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:flex; flex-direction:column; gap:24px; }
+
+  /* Cards */
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:24px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: #3a3a50; }
+  .card-title {
+    font-family:'Syne',sans-serif; font-weight:700; font-size:13px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    margin-bottom:18px;
+  }
+
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .col { flex:1; min-width:200px; }
+  .col-2 { flex:2; min-width:300px; }
+  .col-3 { flex:3; min-width:400px; }
+
+  /* Upload zone */
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:var(--radius);
+    padding:40px; text-align:center; cursor:pointer;
+    transition:all .2s; position:relative; overflow:hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag {
+    border-color:var(--accent); background: rgba(124,106,247,.05);
+  }
+  .upload-zone input { display:none; }
+  .upload-icon { font-size:36px; margin-bottom:12px; display:block; }
+  .upload-title { font-family:'Syne',sans-serif; font-weight:700; font-size:16px; margin-bottom:6px; }
+  .upload-sub { color:var(--muted); font-size:13px; }
+
+  .sample-btns { display:flex; gap:8px; margin-top:16px; justify-content:center; flex-wrap:wrap; }
+  .sample-btn {
+    padding:7px 16px; border-radius:20px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-size:12px; cursor:pointer;
+    font-family:'DM Mono',monospace; transition:all .2s;
+  }
+  .sample-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Form controls */
+  label { display:block; color:var(--muted); font-size:12px; margin-bottom:6px; letter-spacing:.04em; }
+  select, input[type=number], input[type=text] {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); padding:9px 12px; font-size:13px;
+    font-family:'DM Sans',sans-serif; outline:none; transition:border .2s;
+    appearance:none;
+  }
+  select:focus, input:focus { border-color:var(--accent); }
+
+  .checkbox-group { display:flex; flex-wrap:wrap; gap:8px; }
+  .checkbox-item {
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; padding:6px 10px; cursor:pointer; transition:all .2s;
+    font-size:12px; font-family:'DM Mono',monospace;
+  }
+  .checkbox-item:hover { border-color:var(--accent); }
+  .checkbox-item input { width:auto; accent-color:var(--accent); }
+  .checkbox-item.selected { border-color:var(--accent); background:rgba(124,106,247,.1); color:var(--accent); }
+
+  /* Buttons */
+  .btn {
+    padding:10px 24px; border-radius:8px; border:none; cursor:pointer;
+    font-family:'Syne',sans-serif; font-weight:600; font-size:13px;
+    letter-spacing:.04em; transition:all .2s;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg, var(--accent), #9b8af7);
+    color:#fff;
+  }
+  .btn-primary:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 4px 20px rgba(124,106,247,.3); }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+  .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Metrics */
+  .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+  .metric-card {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; padding:16px;
+  }
+  .metric-label { font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; }
+  .metric-value { font-family:'Syne',sans-serif; font-weight:700; font-size:22px; }
+  .metric-value.good { color:var(--success); }
+  .metric-value.warn { color:var(--warn); }
+  .metric-value.accent { color:var(--accent); }
+  .metric-value.accent2 { color:var(--accent2); }
+  .metric-value.accent3 { color:var(--accent3); }
+
+  /* Chart containers */
+  .chart-wrap { position:relative; height:300px; width:100%; }
+  .chart-wrap canvas { max-height:300px; }
+
+  /* Profile table */
+  .profile-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .profile-table th {
+    text-align:left; padding:8px 12px; color:var(--muted);
+    border-bottom:1px solid var(--border); font-weight:500;
+    letter-spacing:.04em; text-transform:uppercase; font-size:11px;
+  }
+  .profile-table td { padding:8px 12px; border-bottom:1px solid rgba(42,42,56,.5); }
+  .profile-table tr:hover td { background:var(--surface2); }
+  .type-badge {
+    padding:2px 8px; border-radius:4px; font-family:'DM Mono',monospace; font-size:10px;
+  }
+  .type-num { background:rgba(124,106,247,.15); color:var(--accent); }
+  .type-cat { background:rgba(247,106,140,.15); color:var(--accent2); }
+  .missing-bar { height:4px; border-radius:2px; background:var(--border); margin-top:3px; }
+  .missing-fill { height:100%; border-radius:2px; background:var(--warn); }
+
+  /* Feature importance bar */
+  .fi-item { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .fi-name { font-family:'DM Mono',monospace; font-size:11px; min-width:140px; color:var(--muted); }
+  .fi-bar-wrap { flex:1; background:var(--surface2); border-radius:3px; height:6px; }
+  .fi-bar { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+  .fi-val { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); min-width:50px; text-align:right; }
+
+  /* Predict panel */
+  .predict-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+  .predict-result {
+    background:linear-gradient(135deg,rgba(124,106,247,.15),rgba(247,106,140,.1));
+    border:1px solid var(--accent); border-radius:var(--radius);
+    padding:20px; text-align:center; margin-top:16px;
+  }
+  .predict-result-label { color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+  .predict-result-value { font-family:'Syne',sans-serif; font-weight:800; font-size:32px; color:var(--accent); }
+
+  /* Spinner */
+  .spinner {
+    width:20px; height:20px; border:2px solid var(--border);
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin .7s linear infinite; display:inline-block; vertical-align:middle;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .loading-msg { color:var(--muted); display:flex; align-items:center; gap:10px; padding:20px 0; }
+
+  /* Toast */
+  #toast {
+    position:fixed; bottom:24px; right:24px; z-index:1000;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:10px; padding:12px 20px; font-size:13px;
+    transform:translateY(80px); opacity:0; transition:all .3s;
+    max-width:320px;
+  }
+  #toast.show { transform:translateY(0); opacity:1; }
+  #toast.error { border-color:var(--accent2); color:var(--accent2); }
+  #toast.success { border-color:var(--success); color:var(--success); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+  .empty-state { text-align:center; padding:40px; color:var(--muted); }
+  .empty-icon { font-size:32px; margin-bottom:12px; }
+
+  .section-divider {
+    height:1px; background:var(--border); margin:4px 0;
+  }
+
+  .badge {
+    display:inline-block; padding:2px 8px; border-radius:4px;
+    font-size:11px; font-family:'DM Mono',monospace;
+    background:rgba(124,106,247,.15); color:var(--accent);
+  }
+
+  .ts-legend {
+    display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;
+  }
+  .ts-legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+  .ts-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Predictive<span>Analytics</span> Studio</div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('data')">📊 Data</button>
+    <button class="tab-btn" onclick="switchTab('regression')">📈 Regression</button>
+    <button class="tab-btn" onclick="switchTab('timeseries')">🕐 Time Series</button>
+  </nav>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">v1.0.0</div>
+</header>
+
+<div class="main">
+
+<!-- ═══════════════════ DATA TAB ═══════════════════ -->
+<div id="tab-data" class="tab-content active">
+
+  <div class="card">
+    <div class="card-title">Load Dataset</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
+      <span class="upload-icon">⬆️</span>
+      <div class="upload-title">Drop a CSV or Excel file here</div>
+      <div class="upload-sub">or click to browse your files</div>
+      <div class="sample-btns">
+        <span style="color:var(--muted);font-size:12px;align-self:center">Try a sample:</span>
+        <button class="sample-btn" onclick="loadSample('housing',event)">🏠 Housing (Regression)</button>
+        <button class="sample-btn" onclick="loadSample('sales',event)">📦 Sales (Time Series)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dataProfileCard" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="card-title" style="margin-bottom:0">Dataset Profile</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge" id="ds-rows">— rows</span>
+          <span class="badge" id="ds-cols">— cols</span>
+          <span class="badge" id="ds-name" style="color:var(--accent3);background:rgba(106,247,200,.1)">—</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="profile-table" id="profileTable"></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ REGRESSION TAB ═══════════════════ -->
+<div id="tab-regression" class="tab-content">
+
+  <div id="reg-no-data" class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📂</div>
+      <div>Please load a dataset first in the <strong>Data</strong> tab.</div>
+    </div>
+  </div>
+
+  <div id="reg-config" style="display:none">
+    <div class="card">
+      <div class="card-title">Model Configuration</div>
+      <div class="row">
+        <div class="col">
+          <label>Target Column (what to predict)</label>
+          <select id="reg-target"></select>
+        </div>
+        <div class="col">
+          <label>Algorithm</label>
+          <select id="reg-model">
+            <option value="random_forest">Random Forest</option>
+            <option value="gradient_boosting">Gradient Boosting</option>
+            <option value="linear">Linear Regression</option>
+            <option value="ridge">Ridge Regression</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Numeric Imputation</label>
+          <select id="reg-fill-num">
+            <option value="mean">Mean</option>
+            <option value="median">Median</option>
+            <option value="mode">Mode</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Feature Scaling</label>
+          <select id="reg-scaling">
+            <option value="standard">Standard (Z-score)</option>
+            <option value="minmax">Min-Max</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:18px">
+        <label>Feature Columns (select one or more)</label>
+        <div class="checkbox-group" id="reg-features"></div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px">
+        <button class="btn btn-primary" id="reg-train-btn" onclick="trainRegression()">Train Model</button>
+        <div id="reg-loading" style="display:none" class="loading-msg">
+          <div class="spinner"></div> Training…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reg-results" style="display:none">
+    <div class="card">
+      <div class="card-title">Model Performance</div>
+      <div class="metric-grid" id="reg-metrics"></div>
+    </div>
+
+    <div class="row" style="margin-top:0">
+      <div class="col-2">
+        <div class="card" style="height:100%">
+          <div class="card-title">Actual vs Predicted</div>
+          <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card" style="height:100%">
+          <div class="card-title">Feature Importance</div>
+          <div id="fi-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:0">
+      <div class="card-title">Make a Prediction</div>
+      <div class="predict-grid" id="predict-inputs"></div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" onclick="runPredict()">Predict →</button>
+        <div id="pred-loading" style="display:none" class="loading-msg"><div class="spinner"></div></div>
+      </div>
+      <div id="predict-result" style="display:none" class="predict-result">
+        <div class="predict-result-label">Predicted Value</div>
+        <div class="predict-result-value" id="pred-value">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ TIME SERIES TAB ═══════════════════ -->
+<div id="tab-timeseries" class="tab-content">
+
+  <div id="ts-no-data" class="card">
+    <div class="empty-state">
+      <div class="empty-icon">📂</div>
+      <div>Please load a dataset first in the <strong>Data</strong> tab.</div>
+    </div>
+  </div>
+
+  <div id="ts-config" style="display:none">
+    <div class="card">
+      <div class="card-title">Forecast Configuration</div>
+      <div class="row">
+        <div class="col">
+          <label>Date Column</label>
+          <select id="ts-date"></select>
+        </div>
+        <div class="col">
+          <label>Target Column (to forecast)</label>
+          <select id="ts-target"></select>
+        </div>
+        <div class="col">
+          <label>Algorithm</label>
+          <select id="ts-model">
+            <option value="holt_winters">Holt-Winters (ETS)</option>
+            <option value="sarima">SARIMA</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Forecast Periods</label>
+          <input type="number" id="ts-periods" value="12" min="1" max="60"/>
+        </div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px">
+        <button class="btn btn-primary" id="ts-train-btn" onclick="trainTimeSeries()">Run Forecast</button>
+        <div id="ts-loading" style="display:none" class="loading-msg">
+          <div class="spinner"></div> Fitting model…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ts-results" style="display:none">
+    <div class="card">
+      <div class="card-title">Forecast Accuracy</div>
+      <div class="metric-grid" id="ts-metrics"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Historical Data & Forecast</div>
+      <div class="ts-legend">
+        <div class="ts-legend-item"><span class="ts-dot" style="background:var(--accent)"></span> Historical</div>
+        <div class="ts-legend-item"><span class="ts-dot" style="background:var(--accent2)"></span> Test Predictions</div>
+        <div class="ts-legend-item"><span class="ts-dot" style="background:var(--accent3)"></span> Forecast</div>
+      </div>
+      <div class="chart-wrap" style="height:380px"><canvas id="tsChart"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- .main -->
+
+<div id="toast"></div>
+
+<script>
+const API = '';
+let sessionId = null;
+let sessionCols = [];
+let scatterChartInst = null;
+let tsChartInst = null;
+
+// ── utils ─────────────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  setTimeout(() => el.className = '', 3000);
+}
+
+function fmt(n, digits=2) {
+  if (n === null || n === undefined) return '—';
+  return typeof n === 'number' ? n.toLocaleString(undefined,{maximumFractionDigits:digits}) : n;
+}
+
+async function api(path, opts={}) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({detail: res.statusText}));
+    throw new Error(err.detail || 'API error');
+  }
+  return res.json();
+}
+
+// ── upload ────────────────────────────────────────────────────────────────
+
+const zone = document.getElementById('uploadZone');
+zone.onclick = () => document.getElementById('fileInput').click();
+zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag'); };
+zone.ondragleave = () => zone.classList.remove('drag');
+zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
+document.getElementById('fileInput').onchange = e => handleFile(e.target.files[0]);
+
+async function handleFile(file) {
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const data = await api('/api/upload', {method:'POST', body:fd});
+    applyDataset(data);
+    toast(`Loaded ${data.filename}: ${data.rows} rows`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function loadSample(name, e) {
+  e.stopPropagation();
+  try {
+    const data = await api(`/api/sample/${name}`);
+    applyDataset(data);
+    toast(`Loaded sample: ${data.filename}`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function applyDataset(data) {
+  sessionId = data.session_id;
+  sessionCols = data.columns;
+
+  document.getElementById('ds-rows').textContent = data.rows + ' rows';
+  document.getElementById('ds-cols').textContent = data.columns.length + ' cols';
+  document.getElementById('ds-name').textContent = data.filename;
+  document.getElementById('dataProfileCard').style.display = '';
+
+  renderProfile(data.profile);
+  populateRegression(data.columns, data.profile);
+  populateTimeSeries(data.columns, data.profile);
+}
+
+function renderProfile(profile) {
+  const tb = document.getElementById('profileTable');
+  tb.innerHTML = `<thead><tr>
+    <th>Column</th><th>Type</th><th>Missing</th><th>Stats</th>
+  </tr></thead><tbody>${profile.map(c => {
+    const mis = c.missing_pct;
+    const misHtml = `<div>${mis}%</div><div class="missing-bar"><div class="missing-fill" style="width:${Math.min(mis,100)}%"></div></div>`;
+    let stats = '';
+    if (c.type === 'numerical') {
+      stats = `μ ${fmt(c.mean)} · σ ${fmt(c.std)} · [${fmt(c.min,0)} – ${fmt(c.max,0)}]`;
+    } else {
+      stats = `${c.unique_count} unique · top: <em>${c.top_value}</em>`;
+    }
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${c.name}</td>
+      <td><span class="type-badge ${c.type==='numerical'?'type-num':'type-cat'}">${c.type}</span></td>
+      <td>${misHtml}</td>
+      <td style="color:var(--muted);font-size:12px">${stats}</td>
+    </tr>`;
+  }).join('')}</tbody>`;
+}
+
+// ── regression UI ─────────────────────────────────────────────────────────
+
+function populateRegression(cols, profile) {
+  document.getElementById('reg-no-data').style.display = 'none';
+  document.getElementById('reg-config').style.display = '';
+  document.getElementById('reg-results').style.display = 'none';
+
+  const numCols = profile.filter(c=>c.type==='numerical').map(c=>c.name);
+  const targetSel = document.getElementById('reg-target');
+  targetSel.innerHTML = cols.map(c => `<option value="${c}">${c}</option>`).join('');
+  // Default to last numeric col (likely the target)
+  if (numCols.length) targetSel.value = numCols[numCols.length-1];
+
+  const featDiv = document.getElementById('reg-features');
+  featDiv.innerHTML = cols.map(c => `
+    <label class="checkbox-item" onclick="toggleFeature(this)">
+      <input type="checkbox" value="${c}" checked> ${c}
+    </label>`).join('');
+}
+
+function toggleFeature(el) {
+  el.classList.toggle('selected', el.querySelector('input').checked);
+}
+
+async function trainRegression() {
+  if (!sessionId) { toast('Load a dataset first','error'); return; }
+  const target = document.getElementById('reg-target').value;
+  const features = [...document.querySelectorAll('#reg-features input:checked')].map(i=>i.value).filter(v=>v!==target);
+  if (!features.length) { toast('Select at least one feature column','error'); return; }
+
+  document.getElementById('reg-train-btn').disabled = true;
+  document.getElementById('reg-loading').style.display = 'flex';
+
+  try {
+    const res = await api('/api/regression/train', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        session_id: sessionId,
+        target_col: target,
+        feature_cols: features,
+        model_type: document.getElementById('reg-model').value,
+        fill_numeric: document.getElementById('reg-fill-num').value,
+        scaling: document.getElementById('reg-scaling').value,
+      })
+    });
+    renderRegressionResults(res, target, features);
+    document.getElementById('reg-results').style.display = '';
+    toast('Model trained successfully 🎉','success');
+  } catch(e) { toast(e.message,'error'); }
+  finally {
+    document.getElementById('reg-train-btn').disabled = false;
+    document.getElementById('reg-loading').style.display = 'none';
+  }
+}
+
+function renderRegressionResults(res, target, features) {
+  const m = res.metrics;
+  const isR2Good = m.r2 >= 0.8;
+  document.getElementById('reg-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">R² Score</div><div class="metric-value ${isR2Good?'good':'warn'}">${fmt(m.r2,3)}</div></div>
+    <div class="metric-card"><div class="metric-label">CV R² (5-fold)</div><div class="metric-value accent">${fmt(m.cv_r2_mean,3)} ±${fmt(m.cv_r2_std,3)}</div></div>
+    <div class="metric-card"><div class="metric-label">MAE</div><div class="metric-value accent2">${fmt(m.mae)}</div></div>
+    <div class="metric-card"><div class="metric-label">RMSE</div><div class="metric-value accent3">${fmt(m.rmse)}</div></div>
+    <div class="metric-card"><div class="metric-label">MAPE</div><div class="metric-value">${fmt(m.mape,1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">Samples</div><div class="metric-value" style="color:var(--muted)">${res.n_samples}</div></div>
+  `;
+
+  // Scatter chart
+  if (scatterChartInst) scatterChartInst.destroy();
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+  const vals = res.scatter.map(d=>d.actual);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  scatterChartInst = new Chart(ctx, {
+    type:'scatter',
+    data:{
+      datasets:[
+        { label:'Predictions', data: res.scatter.map(d=>({x:d.actual,y:d.predicted})),
+          backgroundColor:'rgba(124,106,247,.5)', pointRadius:4, pointHoverRadius:6 },
+        { label:'Perfect fit', data:[{x:mn,y:mn},{x:mx,y:mx}],
+          type:'line', borderColor:'rgba(247,106,140,.5)', borderDash:[6,4],
+          pointRadius:0, fill:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:'#6b6b80',font:{family:'DM Mono',size:11}}}, tooltip:{callbacks:{label:p=>`Actual: ${fmt(p.raw.x)} | Predicted: ${fmt(p.raw.y)}`}} },
+      scales:{
+        x:{ticks:{color:'#6b6b80',font:{size:10}},grid:{color:'rgba(42,42,56,.6)'},title:{display:true,text:`Actual ${target}`,color:'#6b6b80'}},
+        y:{ticks:{color:'#6b6b80',font:{size:10}},grid:{color:'rgba(42,42,56,.6)'},title:{display:true,text:`Predicted ${target}`,color:'#6b6b80'}}
+      }
+    }
+  });
+
+  // Feature importance
+  const fiList = document.getElementById('fi-list');
+  if (res.feature_importance.length) {
+    const maxImp = res.feature_importance[0].importance;
+    fiList.innerHTML = res.feature_importance.map(f=>`
+      <div class="fi-item">
+        <div class="fi-name" title="${f.feature}">${f.feature.length>18?f.feature.slice(0,16)+'…':f.feature}</div>
+        <div class="fi-bar-wrap"><div class="fi-bar" style="width:${(f.importance/maxImp*100).toFixed(1)}%"></div></div>
+        <div class="fi-val">${(f.importance*100).toFixed(1)}%</div>
+      </div>`).join('');
+  } else {
+    fiList.innerHTML = '<div style="color:var(--muted);font-size:12px">Coefficients not available for this model.</div>';
+  }
+
+  // Predict inputs
+  document.getElementById('predict-inputs').innerHTML = features.map(f=>`
+    <div>
+      <label>${f}</label>
+      <input type="text" id="pi-${f}" placeholder="Enter value"/>
+    </div>`).join('');
+  document.getElementById('predict-result').style.display = 'none';
+}
+
+async function runPredict() {
+  if (!sessionId) return;
+  const inputs = {};
+  document.querySelectorAll('#predict-inputs input').forEach(i => {
+    const key = i.id.replace('pi-','');
+    inputs[key] = i.value;
+  });
+  document.getElementById('pred-loading').style.display = 'flex';
+  try {
+    const res = await api('/api/regression/predict', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id:sessionId, inputs})
+    });
+    document.getElementById('pred-value').textContent = res.prediction.toLocaleString();
+    document.getElementById('predict-result').style.display = '';
+  } catch(e) { toast(e.message,'error'); }
+  finally { document.getElementById('pred-loading').style.display = 'none'; }
+}
+
+// ── time series UI ────────────────────────────────────────────────────────
+
+function populateTimeSeries(cols, profile) {
+  document.getElementById('ts-no-data').style.display = 'none';
+  document.getElementById('ts-config').style.display = '';
+  document.getElementById('ts-results').style.display = 'none';
+
+  const dateSel = document.getElementById('ts-date');
+  const targetSel = document.getElementById('ts-target');
+  dateSel.innerHTML = cols.map(c=>`<option value="${c}">${c}</option>`).join('');
+  targetSel.innerHTML = cols.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  // Auto-detect date col
+  const dateCol = cols.find(c=>c.toLowerCase().includes('date')||c.toLowerCase().includes('time'));
+  if (dateCol) dateSel.value = dateCol;
+  // Auto-detect numeric target
+  const numCols = profile.filter(c=>c.type==='numerical').map(c=>c.name);
+  if (numCols.length) targetSel.value = numCols[numCols.length-1];
+}
+
+async function trainTimeSeries() {
+  if (!sessionId) { toast('Load a dataset first','error'); return; }
+  document.getElementById('ts-train-btn').disabled = true;
+  document.getElementById('ts-loading').style.display = 'flex';
+  try {
+    const res = await api('/api/timeseries/train', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        session_id: sessionId,
+        date_col: document.getElementById('ts-date').value,
+        target_col: document.getElementById('ts-target').value,
+        model_type: document.getElementById('ts-model').value,
+        forecast_periods: parseInt(document.getElementById('ts-periods').value)||12,
+      })
+    });
+    renderTSResults(res);
+    document.getElementById('ts-results').style.display = '';
+    toast('Forecast ready 🎉','success');
+  } catch(e) { toast(e.message,'error'); }
+  finally {
+    document.getElementById('ts-train-btn').disabled = false;
+    document.getElementById('ts-loading').style.display = 'none';
+  }
+}
+
+function renderTSResults(res) {
+  const m = res.metrics;
+  document.getElementById('ts-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">MAE</div><div class="metric-value accent">${fmt(m.mae)}</div></div>
+    <div class="metric-card"><div class="metric-label">RMSE</div><div class="metric-value accent2">${fmt(m.rmse)}</div></div>
+    <div class="metric-card"><div class="metric-label">MAPE</div><div class="metric-value accent3">${fmt(m.mape,1)}%</div></div>
+    <div class="metric-card"><div class="metric-label">Train Samples</div><div class="metric-value" style="color:var(--muted)">${res.n_train}</div></div>
+    <div class="metric-card"><div class="metric-label">Test Samples</div><div class="metric-value" style="color:var(--muted)">${res.n_test}</div></div>
+    <div class="metric-card"><div class="metric-label">Algorithm</div><div class="metric-value" style="font-size:13px;color:var(--accent)">${res.model_type.replace('_','-').toUpperCase()}</div></div>
+  `;
+
+  if (tsChartInst) tsChartInst.destroy();
+  const ctx = document.getElementById('tsChart').getContext('2d');
+
+  const histLabels = res.historical.map(d=>d.date);
+  const histValues = res.historical.map(d=>d.value);
+  const testLabels = res.test_predictions.map(d=>d.date);
+  const testValues = res.test_predictions.map(d=>d.value);
+  const fcLabels   = res.forecast.map(d=>d.date);
+  const fcValues   = res.forecast.map(d=>d.value);
+
+  const allLabels = [...new Set([...histLabels, ...testLabels, ...fcLabels])];
+
+  const histData = allLabels.map(l => { const i=histLabels.indexOf(l); return i>=0?histValues[i]:null; });
+  const testData = allLabels.map(l => { const i=testLabels.indexOf(l); return i>=0?testValues[i]:null; });
+  const fcData   = allLabels.map(l => { const i=fcLabels.indexOf(l);   return i>=0?fcValues[i]:null; });
+
+  tsChartInst = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:allLabels,
+      datasets:[
+        { label:'Historical', data:histData, borderColor:'rgba(124,106,247,.9)', borderWidth:2,
+          pointRadius:1, fill:false, tension:.35 },
+        { label:'Test Predictions', data:testData, borderColor:'rgba(247,106,140,.9)', borderWidth:2,
+          borderDash:[5,3], pointRadius:3, fill:false, tension:.35 },
+        { label:'Forecast', data:fcData, borderColor:'rgba(106,247,200,.9)', borderWidth:2.5,
+          pointRadius:3, fill:'+1', backgroundColor:'rgba(106,247,200,.06)', tension:.35 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{labels:{color:'#6b6b80',font:{family:'DM Mono',size:11}}},
+        tooltip:{ backgroundColor:'rgba(17,17,24,.95)', borderColor:'#2a2a38', borderWidth:1,
+          titleColor:'#e8e8f0', bodyColor:'#6b6b80', titleFont:{family:'DM Mono'} }
+      },
+      scales:{
+        x:{ ticks:{color:'#6b6b80',font:{size:10},maxRotation:45}, grid:{color:'rgba(42,42,56,.6)'} },
+        y:{ ticks:{color:'#6b6b80',font:{size:10}}, grid:{color:'rgba(42,42,56,.6)'} }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
